@@ -125,9 +125,9 @@
 
 (declare emit)
 
-(defn- emit-attrs [attrs etc & {safe :safe :or {safe false}}]
+(defn- emit-attrs [attrs etc & {attrs-safe :attrs-safe :or {attrs-safe #{}}}]
   (mapknit (fn [[k v] etc]
-             (list* " " (name k) "=\"" (if safe
+             (list* " " (name k) "=\"" (if (attrs-safe (keyword k))
                                          (attr-str-safe v)
                                          (attr-str v)) "\"" etc)) attrs etc))
 
@@ -143,7 +143,7 @@
               (if (self-closing-tags (:tag tag)) 
                 (cons " />" etc)
                 (list* "></" name ">" etc)))
-        etc (emit-attrs (:attrs tag) etc :safe (get tag :attrs-safe false))]
+        etc (emit-attrs (:attrs tag) etc :attrs-safe (get tag :attrs-safe #{}))]
     (list* "<" name etc)))
 
 (defn- emit-comment [node etc]
@@ -637,7 +637,10 @@
 
 (defn set-attr-safe
   [& kvs]
-  #(assoc % :attrs (apply assoc (:attrs % {}) kvs) :attrs-safe true))
+  #(assoc % :attrs (apply assoc (:attrs % {}) kvs)
+            :attrs-safe (apply conj (:attrs-safe % #{})
+                               (keys (apply hash-map kvs)))))
+
      
 (defn remove-attr 
  "Dissocs attributes on the selected element."
