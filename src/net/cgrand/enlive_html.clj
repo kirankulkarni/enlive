@@ -116,13 +116,20 @@
  [x]
   (-> x str (.replace "&" "&amp;") (.replace "<" "&lt;") (.replace ">" "&gt;") (.replace "\"" "&quot;")))
 
+(defn- attr-str-safe
+ "converts attributes into string without escaping it"
+ [x]
+  (str x))
+
 (def self-closing-tags #{:area :base :basefont :br :hr :input :img :link :meta})
 
 (declare emit)
 
-(defn- emit-attrs [attrs etc]
+(defn- emit-attrs [attrs etc & {safe :safe :or {safe false}}]
   (mapknit (fn [[k v] etc]
-             (list* " " (name k) "=\"" (attr-str v) "\"" etc)) attrs etc))
+             (list* " " (name k) "=\"" (if safe
+                                         (attr-str-safe v)
+                                         (attr-str v)) "\"" etc)) attrs etc))
 
 (defn- content-emitter [tag-name]
   (if (#{"script" "style"} tag-name) (fn [x etc] (cons (str x) etc)) emit))
@@ -136,7 +143,7 @@
               (if (self-closing-tags (:tag tag)) 
                 (cons " />" etc)
                 (list* "></" name ">" etc)))
-        etc (emit-attrs (:attrs tag) etc)]
+        etc (emit-attrs (:attrs tag) etc :safe (get tag :attrs-safe false))]
     (list* "<" name etc)))
 
 (defn- emit-comment [node etc]
@@ -627,6 +634,10 @@
  "Assocs attributes on the selected element."
  [& kvs]
   #(assoc % :attrs (apply assoc (:attrs % {}) kvs)))
+
+(defn set-attr-safe
+  [& kvs]
+  #(assoc % :attrs (apply assoc (:attrs % {}) kvs) :attrs-safe true))
      
 (defn remove-attr 
  "Dissocs attributes on the selected element."
